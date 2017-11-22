@@ -62,13 +62,14 @@ struct
   | Int n -> []
   | Bool b -> []
   | If(e, e1, e2) ->
-    union (freeVars e, union (freeVars e1, freeVars e2))
+      union (freeVars e, union (freeVars e1, freeVars e2))
   | Primop (po, args) ->
-    List.fold_right (fun e1 fv -> union (freeVars e1, fv)) args []
+      List.fold_right (fun e1 fv -> union (freeVars e1, fv)) args []
   | Let (Val (e1, x), e2) ->
       union (freeVars e1, delete ([x], freeVars e2))
-  | Pair (e1, e2) -> assert false
-  | Let (Match (e1, x, y), e2) -> assert false
+  | Pair (e1, e2) -> assert false(*[(freeVars e1, freeVars e2)]*)
+  | Let (Match (e1, x, y), e2) ->
+      union (freeVars e1, delete ([x;y], freeVars e2))
 
 
 
@@ -106,8 +107,18 @@ struct
              Let(Val(e1', y'), subst s e2')
          else
            Let(Val(e1', y), subst s e2)
-    | Let (Match (e1, x, y), e2) -> assert false
-    | Pair (e1, e2) -> assert false
+    | Let (Match (e1, y1, y2), e2) -> assert false (*)
+       let e1' = subst s e1 in
+       if x = Pair (y1,y2) then
+         Let (Match (e1', y1, y2), e2)
+       else
+         if member (Pair(y1, y2)) (freeVars e') then
+           let y' = freshVar (y1, y2) in
+           let e2' = rename (y', (y1, y2)) e2 in
+           Let(Match (e1', y'), e2')
+         else
+           Let(Match (e1', (y1, y2)), subst s e2) *)
+    | Pair (e1, e2) -> Pair (subst s e1, subst s e2)
 
   and rename (x', x) e = subst (Var x', x) e
 end
