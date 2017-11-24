@@ -1,3 +1,5 @@
+#use "hw5.ml"
+
 let exp = E.Let (E.Val(E.Var("c"), "a"), E.Var("b"))
 
 let sub = E.subst
