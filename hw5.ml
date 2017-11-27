@@ -199,8 +199,11 @@ module Types =
       | E.Let (E.Val (e1, x), e2) ->
          let t = infer g e1 in
          infer ((x, t)::g) e2
-      | E.Pair (e1, e2) -> assert false
-      | E.Let (E.Match (e1, x, y), e2) -> assert false
+      | E.Pair (e1, e2) -> Prod (infer g e1, infer g e2)
+      | E.Let (E.Match (e1, x, y), e2) ->
+         let t = infer g e1 in match t with
+           |  Prod(t1, t2) -> infer ((x,t1)::(y, t2)::g) e2
+           |  _ -> fail("e1 has to be a pair") 
     end
 
 module Eval =
@@ -236,8 +239,10 @@ module Eval =
          | Some v -> v)
       | Let (Val (e1, x), e2) -> eval (subst (eval e1, x) e2)
       | Var _ -> raise (Stuck "Bug : we only evaluate closed terms")    (* Variables would not occur in the evaluation of closed terms *)
-      | Pair (e1, e2) -> assert false
-      | Let (Match (e1, x, y), e2) -> assert false
+      | Pair (e1, e2) -> Pair(eval e1, eval e2)
+      | Let (Match (e1, x, y), e2) -> let new_pair = eval e1 in match new_pair with
+        | Pair(v1,v2) -> let e2' = subst (v1, x) e2 in eval (subst (v2, y) e2')
+        | _ -> raise (Stuck "Problem")
   end
 
 

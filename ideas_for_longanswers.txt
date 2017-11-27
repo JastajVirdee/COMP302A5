@@ -50,4 +50,12 @@ let x y = match y with
 
 x : int, e1 : int, y : string, e2 : int, entire expression : int.
 
-1.6: 
+1.6: <code>
+
+1.7: e1 has to evaluate to some pair (v1,v2). We have to replace occurrences of the pair (x,y) in e2 with (v1,v2).
+The resulting e2 expression must evaluate to some value v. In short, we have:
+
+e1->(v1,v2)  [(v1,v2)/(x,y)]e2 -> v
+let x,y = e1 in e2 end -> v
+
+
