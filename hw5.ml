@@ -70,6 +70,8 @@ struct
   | Pair (e1, e2) -> union (freeVars e1, freeVars e2)
   | Let (Match (e1, x, y), e2) ->
       union (freeVars e1, delete ([x;y], freeVars e2))
+  | Fst e -> freeVars e
+  | Snd e -> freeVars e
 
   (* ---------------------------------------------------------------- *)
   (* Substitution
@@ -128,6 +130,8 @@ struct
             Let(Match (e1', x, y), subst s e2)
 
     | Pair (e1, e2) -> Pair (subst s e1, subst s e2)
+    | Fst e -> subst s e
+    | Snd e -> subst s e
 
   and rename (x', x) e = subst (Var x', x) e
 end
