@@ -30,15 +30,24 @@ Much like in 1.1, it is easy to substitute x in Fst and Snd as both are made up 
 
 
 1.5:
+
+Pattern matching will use the type Match(x, y, e) where we have x and y, two variables, and e, the expression to which the pattern matching evaluates to.
+
+To use pattern matchin with Let, we would need: Let(Match(e1,x,y),e2). This is the equivalent of:
+Let x,y = (pattern matching on y with evaluates to e1) in e2
+
+Well-typed expression:
+If Let(Match(e1,x,y),e2) : T, then e2 : T. e1 : T',T'' and x,y : T', T''
+
+We know that e2 must evaluate to the same type as the entire Let expression.
+The two variables x,y don't need to have the same type, but x,y and e1 should have the same type.
+
+Example:
 let x y = match y with
-  | v -> e1
-  | _ -> e2
-The input with pattern matching will have to be of type Pair(x, y). The second expression will have to match a case.
-We can't have pattern matching with only one variable (let x = match x with ...) because x is a free variable which will not match to anything.
+  |  "a" -> 0
+  |  _ -> 1
+  in x "a"
 
+x : int, e1 : int, y : string, e2 : int, entire expression : int.
 
-Recall: as seen in notes, LET is described as
-let x = e1 in e2 end: e1 evaluates to v1, then we replace free occurences of x in e2 by v1 and evaluate e2 to v2.
-
-ex.: let x = 5 in x+4 gives 9 <-- evaluate e1 (5), then replace "x" in "x+4" with 5 to get 5+4 = 9.
-
+1.6: 
