@@ -12,11 +12,22 @@ In a pair of two expressions, the set of free variables will be the union betwee
 In a let with a "match" instead of a "value", i.e.: (x,y) = e instead of simply x = e, the logic will be similar to the original let. However, since we're dealing with a pair instead of a single value, we need to remove all free occurences of both x and y in e2.
 For Fst and Snd, it is simpler to find the free variables: both are made up of expressions, therefore it suffices to find the free variables within these expressions.
 
+FV(Match(e, x, y)) = (e/{x})e U (e/{y})e
+FV(Pair(e1,e2)) = FV(e1) U FV(e2)
+
+---------------------------------------------------------------------
+
 1.3: The subsitution of x in a pair is straight forward. It is similar to the simple substitution of x in an expression e, except now we have two expressions e1 and e2. Therefore, the output will be a new pair in which we've substituted x in both of the expression of the input pair.
+
 For Let with a Match, it is also similar to the regular Let. 
 In the regular Let, the free occurences of x are replaced in both e1 and e2. If we notice that x is the same variable as that of the first expression (let x = (x = e1) in e2) we simply replace it in e1. Otherwise, we replace it in both e1 and in the free variables of e2.
+
 In Let with a match, we have x,y = e1. Therefore, if x = y we know that neither of the two are free variables in e2 and can therefore simply be replaced in e1. Otherwise, we would have to replace x and y in the free variables of e1 and e2. If x is a member of the free variables of e', we need to ensure that y is also a free variable within e', and vice-versa. Otherwise, if only x is a free variable within e', then we have a similar case to the regular Let.
 Much like in 1.1, it is easy to substitute x in Fst and Snd as both are made up of a single expression. Again, we can simply substitute x in the expressions which constitute Fst and Snd.
+
+[e'/x](e1 pair e2) = [e'/x]e1 pair [e'/x]e2
+[e'/x](let x,y = e1 in e2) = let x,y = [e'/x][e'/y]e1 in [e'/x][e'/y]e2 
+
 
 1.5:
 let x y = match y with
