@@ -34,10 +34,10 @@ Much like in 1.1, it is easy to substitute x in Fst and Snd as both are made up 
 Pattern matching will use the type Match(x, y, e) where we have x and y, two variables, and e, the expression to which the pattern matching evaluates to.
 
 To use pattern matchin with Let, we would need: Let(Match(e1,x,y),e2). This is the equivalent of:
-Let x,y = (pattern matching on y with evaluates to e1) in e2
+Let x,y = (pattern matching on y with evaluates to e1) in e2.
 
 Well-typed expression:
-If Let(Match(e1,x,y),e2) : T, then e2 : T. e1 : T',T'' and x,y : T', T''
+If Let(Match(e1,x,y),e2) : T, then e2 : T. e1 : (T',T'') and (x,y) : (T',T'')
 
 We know that e2 must evaluate to the same type as the entire Let expression.
 The two variables x,y don't need to have the same type, but x,y and e1 should have the same type.
