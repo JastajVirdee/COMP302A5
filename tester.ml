@@ -29,8 +29,8 @@ let test_infer = infer (T.E.Var("a"))
 let test_infer_if = infer(T.E.If((E.Var "b"),(E.Bool true),(E.Var "b")))
 let test_infer_pair_1 = infer(T.E.Pair((E.Var "b"),(E.Bool true)))
 let test_infer_pair_2 = infer(T.E.Pair((E.Var "b"),(E.Var "a")))
-let test_infer_match = infer(T.E.Let(E.Match((E.Pair((E.Int 1),(E.Var "a"))),"b","c"),(E.Var "d")))
-let test_infer_match_error_1 = infer(T.E.Let(E.Match((E.Pair((E.Int 1),(E.Var "a"))),"x","y"),(E.Var "b")))
+let test_infer_match_int = infer(T.E.Let(E.Match((E.Pair((E.Int 1),(E.Var "b"))),"x","y"),(E.Var "a")))
+let test_infer_match_bool = infer(T.E.Let(E.Match((E.Pair((E.Int 1),(E.Var "a"))),"x","y"),(E.Var "b")))
 let test_infer_match_error_2 = infer(T.E.Let(E.Match((E.Var "a"),"b","c"),(E.Bool true)))
 
 (*

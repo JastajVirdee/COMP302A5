@@ -56,6 +56,7 @@ struct
   (* Computing the set of free variables in an expression *)
 
   (* Q1.2: extend the function for Pair(_, _) and Let (Match(_, _, _), _) *)
+  exception NotFound of string
 
   let rec freeVars e = match e with
   | Var y -> [y]
@@ -70,8 +71,9 @@ struct
   | Pair (e1, e2) -> union (freeVars e1, freeVars e2)
   | Let (Match (e1, x, y), e2) ->
       union (freeVars e1, delete ([x;y], freeVars e2))
-  | Fst e -> freeVars e
-  | Snd e -> freeVars e
+  | Fst (Pair(e1,e2)) -> freeVars e1
+  | Snd (Pair(e1,e2)) -> freeVars e2
+  | _ -> raise (NotFound "Not a valid expression.")
 
   (* ---------------------------------------------------------------- *)
   (* Substitution
@@ -130,8 +132,9 @@ struct
             Let(Match (e1', x, y), subst s e2)
 
     | Pair (e1, e2) -> Pair (subst s e1, subst s e2)
-    | Fst e -> subst s e
-    | Snd e -> subst s e
+    | Fst (Pair(e1,e2)) -> subst s e1
+    | Snd (Pair(e1,e2)) -> subst s e2
+    | _ -> raise (NotFound "Not a valid expression.")
 
   and rename (x', x) e = subst (Var x', x) e
 end
@@ -273,7 +276,26 @@ module type Optimization =
   end
 
 (* Q3.1: implement dead code elimintion *)
-(* module DeadCode : Optimization = ... *)
+module DeadCode : Optimization =
+  struct
+  let rec optimize e = match e with
+    | E.Fst (E.Pair(e1,e2)) -> optimize e1
+    | E.Snd (E.Pair(e1,e2)) -> optimize e2
+    | E.If(e,e1,e2) -> E.If(optimize e,optimize e1,optimize e2)
+    | E.Primop (po, args) -> let args' = (List.map optimize args) in E.Primop(po,args')
+    | E.Pair(e1, e2) -> E.Pair(optimize e1, optimize e2)
+    | E.Let (E.Val (e1, x), e2) -> let e2_free = E.freeVars e2 in
+      if e2_free = [] then e2
+      else
+        if Eval.eval (E.Let (E.Val (e1, x), e2)) = e1 then E.Let(E.Val(e1,x),E.Var(x))
+        else E.Let(E.Val(optimize e1,x),optimize e2)
+    | E.Let (E.Match (e1, x, y), e2) -> let e2_free = E.freeVars e2 in
+      if e2_free = [] then e2
+      else
+        if Eval.eval (E.Let (E.Match (e1, x,y), e2)) = e1 then E.Let(E.Match(e1,x,y),E.Pair(E.Var x,E.Var y))
+        else E.Let(E.Match(optimize e1,x,y),optimize e2)
+    | _ -> e (* Int, Bool or free variable Var *)
+    end
 
 (* Q3.2: implement the elimination of pattern matching let *)
 (* module RemoveLetMatch : Optimization = ... *)
