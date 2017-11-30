@@ -56,7 +56,6 @@ struct
   (* Computing the set of free variables in an expression *)
 
   (* Q1.2: extend the function for Pair(_, _) and Let (Match(_, _, _), _) *)
-  exception NotFound of string
 
   let rec freeVars e = match e with
   | Var y -> [y]
@@ -71,9 +70,8 @@ struct
   | Pair (e1, e2) -> union (freeVars e1, freeVars e2)
   | Let (Match (e1, x, y), e2) ->
       union (freeVars e1, delete ([x;y], freeVars e2))
-  | Fst (Pair(e1,e2)) -> freeVars e1
-  | Snd (Pair(e1,e2)) -> freeVars e2
-  | _ -> raise (NotFound "Not a valid expression.")
+  | Fst e -> freeVars e
+  | Snd e -> freeVars e
 
   (* ---------------------------------------------------------------- *)
   (* Substitution
@@ -109,32 +107,32 @@ struct
              Let(Val(e1', y'), subst s e2')
          else
            Let(Val(e1', y), subst s e2)
-    | Let (Match (e1, x,y), e2) ->
+    | Let (Match (e1, y1,y2), e2) ->
+    (* Let x,y = e1 in e2. If x or y are the value we want to sub, we sub x or y. Else, we sub in the free vars. *)
        let e1' = subst s e1 in
-       if x = y then
-         Let (Match (e1', x, y), e2)
+       if (x = y1 || x = y2) then
+         Let (Match (e1', y1, y2), e2)
        else
-        if member x (freeVars e') then
-          let x' = freshVar x in
-          let e2' = rename (x', x) e2 in
-          if member y (freeVars e') then
-            let y' = freshVar y in
-            let e2'' = rename (y', y) e2' in
-            Let (Match (e1', x', y'), e2'')
+        if member y1 (freeVars e') then
+          let y1' = freshVar y1 in
+          let e2' = rename (y1', y2) e2 in
+          if member y2 (freeVars e') then
+            let y2' = freshVar y2 in
+            let e2'' = rename (y2', y2) e2' in
+            Let (Match (e1', y1', y2'), e2'')
           else
-            Let (Match(e1', x', y), e2')
+            Let (Match(e1', y1', y2), e2')
         else
-          if member y (freeVars e') then
-            let y' = freshVar y in
-            let e2' = rename (y', y) e2 in
-            Let (Match (e1', x, y'), e2')
+          if member y2 (freeVars e') then
+            let y2' = freshVar y2 in
+            let e2' = rename (y2', y2) e2 in
+            Let (Match (e1', y1, y2'), e2')
           else
-            Let(Match (e1', x, y), subst s e2)
+            Let(Match (e1', y1, y2), subst s e2)
 
     | Pair (e1, e2) -> Pair (subst s e1, subst s e2)
-    | Fst (Pair(e1,e2)) -> subst s e1
-    | Snd (Pair(e1,e2)) -> subst s e2
-    | _ -> raise (NotFound "Not a valid expression.")
+    | Fst e -> Fst (subst s e)
+    | Snd e -> Snd (subst s e)
 
   and rename (x', x) e = subst (Var x', x) e
 end
@@ -279,8 +277,9 @@ module type Optimization =
 module DeadCode : Optimization =
   struct
   let rec optimize e = match e with
-    | E.Fst (E.Pair(e1,e2)) -> optimize e1
-    | E.Snd (E.Pair(e1,e2)) -> optimize e2
+  (* Worth it to optimize only e1 or e2? *)
+    | E.Fst e -> E.Fst (optimize e)
+    | E.Snd e -> E.Snd (optimize e)
     | E.If(e,e1,e2) -> E.If(optimize e,optimize e1,optimize e2)
     | E.Primop (po, args) -> let args' = (List.map optimize args) in E.Primop(po,args')
     | E.Pair(e1, e2) -> E.Pair(optimize e1, optimize e2)
@@ -290,7 +289,7 @@ module DeadCode : Optimization =
         if Eval.eval (E.Let (E.Val (e1, x), e2)) = e1 then E.Let(E.Val(e1,x),E.Var(x))
         else E.Let(E.Val(optimize e1,x),optimize e2)
     | E.Let (E.Match (e1, x, y), e2) -> let e2_free = E.freeVars e2 in
-      if e2_free = [] then e2
+      if e2_free = [] then e2 (* Optimize e2 -> let y = 5 in 5 should give 5 (optimized e2) *)
       else
         if Eval.eval (E.Let (E.Match (e1, x,y), e2)) = e1 then E.Let(E.Match(e1,x,y),E.Pair(E.Var x,E.Var y))
         else E.Let(E.Match(optimize e1,x,y),optimize e2)
@@ -298,7 +297,21 @@ module DeadCode : Optimization =
     end
 
 (* Q3.2: implement the elimination of pattern matching let *)
-(* module RemoveLetMatch : Optimization = ... *)
+module RemoveLetMatch : Optimization =
+  struct
+  let rec optimize e = match e with  
+    | E.Fst e -> E.Fst (optimize e)
+    | E.Snd e -> E.Snd (optimize e)
+    | E.If(e,e1,e2) -> E.If(optimize e,optimize e1,optimize e2)
+    | E.Primop (po, args) -> let args' = (List.map optimize args) in E.Primop(po,args')
+    | E.Pair(e1, e2) -> E.Pair(optimize e1, optimize e2)
+    | E.Let (E.Val (e1, x), e2) -> E.Let(E.Val(optimize e1, x), optimize e2)
+    | E.Let (E.Match (e1, x, y), e2) -> let z = Eval.eval e1 in
+      let e2' = (E.subst ((E.Fst z), x) e2) in
+      let e2'' = (E.subst ((E.Snd z), y) e2') in
+      E.Let(E.Val(optimize e1, "z"), optimize e2'')
+    | _ -> e (* Int, Bool or free variable Var *)
+  end
 
 module Compose (M1 : Optimization) (M2 : Optimization) : Optimization =
   struct
@@ -306,11 +319,9 @@ module Compose (M1 : Optimization) (M2 : Optimization) : Optimization =
   end
 
 (* To test one after the other use this pipeline *)
-(* module Pipeline = Compose (DeadCode) (RemoveLetMatch) *)
+module Pipeline = Compose (DeadCode) (RemoveLetMatch)
 (* Think about if the order in which you apply matters? is this always
    the case? is there always a good choice? *)
-
-
 (*
 
 let x,y = 5,7 in let z = 2 in x + y +z => 14
