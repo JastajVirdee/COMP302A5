@@ -115,7 +115,7 @@ struct
        else
         if member y1 (freeVars e') then
           let y1' = freshVar y1 in
-          let e2' = rename (y1', y2) e2 in
+          let e2' = rename (y1', y1) e2 in
           if member y2 (freeVars e') then
             let y2' = freshVar y2 in
             let e2'' = rename (y2', y2) e2' in
